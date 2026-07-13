@@ -1,0 +1,9 @@
+{
+  "id": "steam_engine_1800s",
+  "display_name": "1800s Steam Engine",
+  "category": "engine",
+  "length_m": 9.35,
+  "mass_kg": 30000,
+  "forward_axis": "-z",
+  "y_offset": 0.0
+}

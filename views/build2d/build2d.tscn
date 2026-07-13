@@ -1,0 +1,31 @@
+[gd_scene load_steps=4 format=3 uid="uid://b1rai1bui1d2d"]
+
+[ext_resource type="Script" path="res://views/build2d/editor_shell.gd" id="1_shell"]
+[ext_resource type="Script" path="res://views/build2d/asset_dock.gd" id="2_dock"]
+[ext_resource type="Script" path="res://views/build2d/build2d.gd" id="3_map"]
+
+[node name="Build2D" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_shell")
+
+[node name="HSplit" type="HSplitContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="AssetDock" type="PanelContainer" parent="HSplit"]
+layout_mode = 2
+script = ExtResource("2_dock")
+
+[node name="Map" type="Control" parent="HSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("3_map")

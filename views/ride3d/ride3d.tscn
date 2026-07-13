@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3 uid="uid://b1rai1ride3d0"]
+
+[ext_resource type="Script" path="res://views/ride3d/ride3d.gd" id="1_ride3d"]
+
+[node name="Ride3D" type="Node3D"]
+script = ExtResource("1_ride3d")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+
+[node name="Terrain" type="MeshInstance3D" parent="."]
+
+[node name="TrackHolder" type="Node3D" parent="."]
+
+[node name="Trains" type="Node3D" parent="."]
+
+[node name="AerialCam" type="Camera3D" parent="."]
+
+[node name="FreeCam" type="Camera3D" parent="."]
+
+[node name="CabCam" type="Camera3D" parent="."]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 900.0
+offset_bottom = 40.0
+text = "3D RIDE   [C] cycle camera (Aerial/Free/Cab)   [Tab] back to build   Free-cam: RMB look, WASD move, Q/E up-down"

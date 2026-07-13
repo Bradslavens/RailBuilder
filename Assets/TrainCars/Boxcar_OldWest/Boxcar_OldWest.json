@@ -1,0 +1,9 @@
+{
+  "id": "boxcar_oldwest",
+  "display_name": "Old West Boxcar",
+  "category": "car",
+  "length_m": 8.5,
+  "mass_kg": 12000,
+  "forward_axis": "x",
+  "y_offset": 0.0
+}
