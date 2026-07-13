@@ -1,0 +1,9 @@
+{
+  "id": "passengercar_oldwest",
+  "display_name": "Old West Passenger Car",
+  "category": "car",
+  "length_m": 13.0,
+  "mass_kg": 15000,
+  "forward_axis": "-z",
+  "y_offset": 0.0
+}
