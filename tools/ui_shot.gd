@@ -3,6 +3,12 @@ extends Node
 ## Runs as a scene so autoloads (GameState) are live:
 ##   RB_SHOT=/tmp/out.png RB_VIEW=build2d godot4 --path . res://tools/ui_shot.tscn
 ## RB_VIEW: build2d (default) | ride3d.  RB_TICKS: sim seconds to advance (default 6).
+## RB_CAR: model id to couple behind the engine (default: the first modeled car),
+## e.g. RB_CAR=passengercar_oldwest to shoot a specific asset.
+##
+## Godot ships as a snap here, which has a private /tmp — a RB_SHOT path under
+## /tmp is silently unwritable (save_png returns ERR_FILE_CANT_OPEN). Point it
+## somewhere under $HOME.
 
 func _ready() -> void:
 	_seed_world()
@@ -44,6 +50,14 @@ func _seed_world() -> void:
 		if def.mesh_path != "":
 			box = def
 			break
+	# RB_CAR names a specific car to shoot instead of whichever modeled car scans first.
+	var want := OS.get_environment("RB_CAR")
+	if want != "":
+		var picked := lib.get_def(StringName(want))
+		if picked == null:
+			push_warning("RB_CAR=%s not in the library; using %s" % [want, box.id])
+		else:
+			box = picked
 	var placed := TrainBuilder.place_vehicle(w, eng, Vector2(0.0, -6.0))
 	if bool(placed.ok):
 		var train: Consist = placed.consist
