@@ -40,6 +40,11 @@ func _ready() -> void:
 	_tree = Tree.new()
 	_tree.hide_root = true
 	_tree.select_mode = Tree.SELECT_SINGLE
+	# A focused Tree eats printable keys for its type-ahead search (and Space via
+	# ui_accept), which would swallow the map hotkeys — +/-, F, Q/E — the moment you
+	# clicked a piece. Selection is mouse-driven, so the Tree never needs focus.
+	_tree.focus_mode = Control.FOCUS_NONE
+	_tree.allow_search = false
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tree.item_selected.connect(_on_item_selected)
 	_tree.set_drag_forwarding(_get_tree_drag_data, Callable(), Callable())
