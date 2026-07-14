@@ -1,0 +1,10 @@
+{
+  "id": "building_westernrust",
+  "display_name": "Old West Building (Rusted)",
+  "category": "terrain",
+  "length_m": 7.1,
+  "mass_kg": 0,
+  "forward_axis": "-z",
+  "y_offset": 0.0,
+  "price": 0
+}
