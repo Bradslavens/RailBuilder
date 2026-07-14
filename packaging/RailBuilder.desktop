@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=RailBuilder
+GenericName=Model Railroad Builder
+Comment=Build your layout in 2D, then ride it in 3D
+Exec=RailBuilder
+Icon=railbuilder
+Categories=Game;Simulation;
+Keywords=train;railroad;railway;model;simulation;
+Terminal=false

@@ -18,6 +18,7 @@ config/name="RailBuilder"
 config/description="A build-in-2D, ride-in-3D model railroad game with Factorio-style deterministic simulation."
 run/main_scene="res://views/build2d/build2d.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://packaging/railbuilder-256.png"
 
 [autoload]
 

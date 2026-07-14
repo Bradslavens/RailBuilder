@@ -1,7 +1,9 @@
 # Godot 4
 .godot/
-*.import
-export_presets.cfg
+
+# Build output
+build/
+dist/
 
 # OS / editor
 .DS_Store
