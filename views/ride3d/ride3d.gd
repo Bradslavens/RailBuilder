@@ -30,6 +30,7 @@ func _ready() -> void:
 	_setup_environment()
 	_build_terrain()
 	_build_painted_terrain()
+	_build_scenery()
 	_build_track()
 	_build_cars()
 	_build_signals()
@@ -169,6 +170,25 @@ func _build_painted_terrain() -> void:
 		mi.visibility_range_end_margin = 40.0
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		holder.add_child(mi)
+
+# ---------- scenery ----------
+
+## Placed scenery models (mountains, props). ModelLoader grounds each one at y = 0,
+## so the pose from the 2D map is all that is needed. Deliberately not given the
+## SCENERY_LOD_M range that painted cells get: a range is over a hundred meters
+## across and would pop out while still filling the screen.
+func _build_scenery() -> void:
+	if _library == null:
+		_library = ModelLibrary.build_default()
+	var holder := Node3D.new()
+	holder.name = "Scenery"
+	add_child(holder)
+	for s in _world().scenery:
+		var node := ModelLoader.load_model(_library.get_def(StringName(String(s.model_id))))
+		if node == null:
+			continue
+		node.transform = Geo3D.pose_transform(Transform2D(float(s.rot), s.pos as Vector2))
+		holder.add_child(node)
 
 # ---------- signals ----------
 

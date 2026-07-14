@@ -15,6 +15,17 @@ func _ready() -> void:
 	var view := "ride3d" if OS.get_environment("RB_VIEW") == "ride3d" else "build2d"
 	var scene: Node = load("res://views/%s/%s.tscn" % [view, view]).instantiate()
 	add_child(scene)
+	# RB_ZOOM / RB_PAN ("x,y" metres) frame the 2D map, so a shot can pull back far
+	# enough to fit a large scenery model that the default zoom crops away. The
+	# map is the HSplit/Map child; the scene root is just the editor shell.
+	var map: Node = scene.get_node_or_null("HSplit/Map")
+	if map != null:
+		if OS.get_environment("RB_ZOOM") != "":
+			map.set("_zoom", float(OS.get_environment("RB_ZOOM")))
+		var pan := OS.get_environment("RB_PAN").split(",")
+		if pan.size() == 2:
+			map.set("_cam_world", Vector2(float(pan[0]), float(pan[1])))
+		map.queue_redraw()
 	_capture.call_deferred()
 
 func _seed_world() -> void:
@@ -58,6 +69,18 @@ func _seed_world() -> void:
 			push_warning("RB_CAR=%s not in the library; using %s" % [want, box.id])
 		else:
 			box = picked
+	# RB_SCENERY places a scenery model beyond the loop, e.g.
+	# RB_SCENERY=mountainrange_snow. It goes on +y, which is the far side of the
+	# layout from the aerial camera, and is stood off by its own half-length so a
+	# big one frames the track instead of burying it.
+	var scenery_id := OS.get_environment("RB_SCENERY")
+	if scenery_id != "":
+		var sdef := lib.get_def(StringName(scenery_id))
+		if sdef == null:
+			push_warning("RB_SCENERY=%s not in the library" % scenery_id)
+		else:
+			w.place_scenery(sdef.id, Vector2(0.0, sdef.length_m * 0.5 + 40.0))
+
 	var placed := TrainBuilder.place_vehicle(w, eng, Vector2(0.0, -6.0))
 	if bool(placed.ok):
 		var train: Consist = placed.consist

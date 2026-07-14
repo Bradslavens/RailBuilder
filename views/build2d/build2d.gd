@@ -27,6 +27,10 @@ signal tool_changed(tool: Dictionary)
 const BASE_PPM := 32.0
 const SAVE_PATH := "user://layout.json"
 const ROT_STEP := deg_to_rad(15.0)
+# Zooming all the way out has to fit scenery, which dwarfs track: the mountain
+# range is 143 m wide, where the old 0.25 floor showed barely 110 m of map.
+const ZOOM_MIN := 0.08
+const ZOOM_MAX := 6.0
 
 const RAIL_OFFSET_M := 0.7175   # matches TrackMeshBuilder / the GLB gauge
 const TIE_HALF_M := 1.0
@@ -151,7 +155,7 @@ func _tool_label() -> String:
 	match _tool.get("kind", ""):
 		"piece":
 			return str(PieceCatalog.PIECES[int(_tool.index)].get("label", "?"))
-		"vehicle":
+		"vehicle", "scenery":
 			var def := _lib().get_def(StringName(String(_tool.id)))
 			return def.display_name if def != null else "?"
 		"signal":
@@ -264,7 +268,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _zoom_at(screen_px: Vector2, factor: float) -> void:
 	var before := _to_world(screen_px)
-	_zoom = clampf(_zoom * factor, 0.25, 6.0)
+	_zoom = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
 	var after := _to_world(screen_px)
 	_cam_world += before - after
 	_update_status()
@@ -294,6 +298,8 @@ func _apply_tool(world_m: Vector2) -> void:
 			_place_piece(world_m, int(_tool.index))
 		"vehicle":
 			_place_vehicle(world_m)
+		"scenery":
+			_place_scenery(world_m)
 		"signal":
 			if _sim().toggle_signal_at(world_m) != "":
 				queue_redraw()
@@ -311,8 +317,38 @@ func _place_vehicle(world_m: Vector2) -> void:
 		return
 	queue_redraw()
 
+## Scenery drops wherever you click, free of the track, at the ghost's heading.
+func _place_scenery(world_m: Vector2) -> void:
+	var def := _lib().get_def(StringName(String(_tool.get("id", ""))))
+	if def == null:
+		return
+	var s := _sim().place_scenery(def.id, world_m, _ghost_rot)
+	_undo.append({"op": "add_scenery", "scenery": s})
+	_redo.clear()
+	queue_redraw()
+
+## The topmost scenery model whose footprint covers world_m ({} if none). The sim
+## stores only a position, so the footprint comes from the model's own size here.
+func _scenery_at(world_m: Vector2) -> Dictionary:
+	var items := _sim().scenery
+	for i in range(items.size() - 1, -1, -1):
+		var def := _lib().get_def(StringName(String(items[i].model_id)))
+		if def == null:
+			continue
+		if (world_m - (items[i].pos as Vector2)).length() <= def.length_m * 0.5:
+			return items[i]
+	return {}
+
 func _remove_car() -> void:
 	if bool(TrainBuilder.remove_car_at(_sim(), _mouse_world).ok):
+		_update_status()
+		queue_redraw()
+		return
+	var s := _scenery_at(_mouse_world)
+	if not s.is_empty():
+		_sim().remove_scenery(int(s.id))
+		_undo.append({"op": "remove_scenery", "scenery": s})
+		_redo.clear()
 		_update_status()
 		queue_redraw()
 
@@ -388,17 +424,31 @@ func _redo_action() -> void:
 	queue_redraw()
 
 func _apply(a: Dictionary) -> void:
-	if a.op == "add":
-		_sim().track.edges.append(a.edge)
-	else:
-		_sim().track.edges.erase(a.edge)
+	match a.op:
+		"add":
+			_sim().track.edges.append(a.edge)
+		"remove":
+			_sim().track.edges.erase(a.edge)
+		"add_scenery":
+			_sim().add_scenery(a.scenery)
+			return       # scenery is not track: no rebuild needed
+		"remove_scenery":
+			_sim().remove_scenery(int(a.scenery.id))
+			return
 	_sim().track_changed()
 
 func _apply_inverse(a: Dictionary) -> void:
-	if a.op == "add":
-		_sim().track.edges.erase(a.edge)
-	else:
-		_sim().track.edges.append(a.edge)
+	match a.op:
+		"add":
+			_sim().track.edges.erase(a.edge)
+		"remove":
+			_sim().track.edges.append(a.edge)
+		"add_scenery":
+			_sim().remove_scenery(int(a.scenery.id))
+			return
+		"remove_scenery":
+			_sim().add_scenery(a.scenery)
+			return
 	_sim().track_changed()
 
 # ---------- run / persistence ----------
@@ -459,6 +509,7 @@ func _process(_dt: float) -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, _view_size()), AppTheme.CANVAS_BG, true)
 	_draw_terrain()
+	_draw_scenery()
 	_draw_grid()
 
 	for e in _sim().track.edges:
@@ -488,6 +539,10 @@ func _draw_ghost() -> void:
 				_draw_edge_track(ghost, tint.a, tint)
 		"vehicle":
 			_draw_vehicle_ghost()
+		"scenery":
+			var def := _lib().get_def(StringName(String(_tool.get("id", ""))))
+			if def != null:
+				_draw_scenery_model(_mouse_world, _ghost_rot, def, Color(0.5, 1.0, 0.6, 0.65))
 		"signal":
 			var node := _sim().blocks().nearest_node(_mouse_world, 2.5)
 			if not node.is_empty():
@@ -529,6 +584,29 @@ func _draw_vehicle_ghost() -> void:
 		"kind": "engine" if def.category == "engine" else "car",
 		"model_id": def.id, "health": 100.0}
 	_draw_car(pl, Color(0.5, 1.0, 0.6, 0.65))
+
+## Placed scenery models, under the track so rails stay readable across them.
+func _draw_scenery() -> void:
+	for s in _sim().scenery:
+		var def := _lib().get_def(StringName(String(s.model_id)))
+		if def != null:
+			_draw_scenery_model(s.pos, float(s.rot), def)
+
+## One scenery model seen from above: its real top-down render when available, a
+## footprint circle until that render arrives (they are requested lazily).
+func _draw_scenery_model(pos: Vector2, rot: float, def: ModelDef, tint: Color = Color.WHITE) -> void:
+	var center := _to_screen(pos)
+	var sprite := _sprite_for(def.id)
+	if not sprite.is_empty():
+		var half := float(sprite.span_m) * _ppm() * 0.5
+		draw_set_transform(center, rot, Vector2.ONE)
+		draw_texture_rect(sprite.texture, Rect2(Vector2(-half, -half), Vector2(half, half) * 2.0), false, tint)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
+	var r := def.length_m * 0.5 * _ppm()
+	var col := Color(0.42, 0.47, 0.44, 0.55) if tint == Color.WHITE else tint
+	draw_circle(center, r, col)
+	draw_arc(center, r, 0.0, TAU, 48, Color(1, 1, 1, 0.35), 1.5, true)
 
 ## Painted terrain squares under everything else. Simple glyphs hint at the
 ## tall types (mountain/rocks/forest) that get real height in 3D.
