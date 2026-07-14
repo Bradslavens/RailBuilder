@@ -69,3 +69,37 @@ func test_file_roundtrip() -> void:
 	var w2 := Serializer.load_from_file(path)
 	assert_true(w2 != null, "loaded non-null")
 	assert_eq(w2.track.edges.size(), 1, "edge preserved through file")
+
+func test_scenery_roundtrip() -> void:
+	var w := World.new()
+	var a := w.place_scenery(&"mountainrange_snow", Vector2(120, -40), 0.75)
+	w.place_scenery(&"mountainrange_snow", Vector2(-30, 55))
+
+	var w2 := Serializer.world_from_dict(w.to_dict())
+	assert_eq(w2.scenery.size(), 2, "both scenery models restored")
+	assert_eq(String(w2.scenery[0].model_id), "mountainrange_snow", "model id restored")
+	assert_vec_approx(w2.scenery[0].pos, Vector2(120, -40), "position restored")
+	assert_approx(float(w2.scenery[0].rot), 0.75, "rotation restored")
+	assert_approx(float(w2.scenery[1].rot), 0.0, "default rotation is zero")
+
+	# Ids survive, so undo/redo and removal still address the same entries.
+	assert_eq(int(w2.scenery[0].id), int(a.id), "scenery id preserved")
+	w2.remove_scenery(int(a.id))
+	assert_eq(w2.scenery.size(), 1, "removal by id drops exactly one")
+
+func test_v2_save_without_scenery_still_loads() -> void:
+	var w := World.new()
+	w.track.add_edge(StraightEdge.new(Transform2D(0.0, Vector2.ZERO), 10.0))
+	var d := w.to_dict()
+	d.erase("scenery")          # a save written before scenery existed
+	var w2 := Serializer.world_from_dict(d)
+	assert_eq(w2.scenery.size(), 0, "no scenery, and no crash")
+	assert_eq(w2.track.edges.size(), 1, "track still loads")
+
+## A fresh id after load must not collide with a restored one.
+func test_scenery_ids_do_not_collide_after_load() -> void:
+	var w := World.new()
+	w.place_scenery(&"mountainrange_snow", Vector2(10, 10))
+	var w2 := Serializer.world_from_dict(w.to_dict())
+	var added := w2.place_scenery(&"mountainrange_snow", Vector2(20, 20))
+	assert_true(int(added.id) != int(w2.scenery[0].id), "new id differs from the loaded one")

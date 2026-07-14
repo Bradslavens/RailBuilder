@@ -39,6 +39,11 @@ static func world_from_dict(d: Dictionary) -> World:
 		var parts := String(key).split(",")
 		if parts.size() == 2:
 			w.terrain[Vector2i(int(parts[0]), int(parts[1]))] = String(terrain_dict[key])
+	# Absent in v2 saves, which simply load with no scenery.
+	for sd in d.get("scenery", []):
+		w.add_scenery({"id": int(sd.get("id", 0)), "model_id": String(sd.get("model_id", "")),
+			"pos": Vector2(float(sd.get("x", 0.0)), float(sd.get("y", 0.0))),
+			"rot": float(sd.get("rot", 0.0))})
 	for cd in d.get("consists", []):
 		var c := _consist_from_dict(cd, w.track)
 		if c != null:

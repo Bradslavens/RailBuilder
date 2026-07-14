@@ -15,8 +15,10 @@ var track: TrackGraph = TrackGraph.new()
 var consists: Array[Consist] = []
 var signals: Array[Dictionary] = []   # {id, edge_id, end("start"|"end")}
 var terrain: Dictionary = {}          # Vector2i cell -> terrain type id (String)
+var scenery: Array[Dictionary] = []   # {id, model_id (String), pos (Vector2), rot (float)}
 
 var _next_signal_id: int = 1
+var _next_scenery_id: int = 1
 var _blocks: BlockMap = null
 var _blocks_dirty: bool = true
 
@@ -199,6 +201,29 @@ func paint_terrain(cell: Vector2i, type_id: String) -> void:
 	else:
 		terrain[cell] = type_id
 
+# ---------- scenery ----------
+
+## Place a scenery model (mountains, trees, buildings) anywhere on the map. Unlike
+## rolling stock, scenery is not track-bound and the tick loop never reads it: it is
+## decoration that both views render from the same data. Returns the new entry.
+func place_scenery(model_id: StringName, pos: Vector2, rot: float = 0.0) -> Dictionary:
+	var s := {"id": _next_scenery_id, "model_id": String(model_id), "pos": pos, "rot": rot}
+	_next_scenery_id += 1
+	scenery.append(s)
+	return s
+
+## Re-add an existing entry, keeping its id (undo/redo and load).
+func add_scenery(s: Dictionary) -> void:
+	scenery.append(s)
+	_next_scenery_id = maxi(_next_scenery_id, int(s.get("id", 0)) + 1)
+
+## Remove by id. Returns the removed entry, or {} if there was no such id.
+func remove_scenery(id: int) -> Dictionary:
+	for i in range(scenery.size()):
+		if int(scenery[i].id) == id:
+			return scenery.pop_at(i)
+	return {}
+
 func to_dict() -> Dictionary:
 	var edge_dicts := []
 	for e in track.edges:
@@ -209,6 +234,11 @@ func to_dict() -> Dictionary:
 	var terrain_dict := {}
 	for cell in terrain:
 		terrain_dict["%d,%d" % [cell.x, cell.y]] = String(terrain[cell])
+	var scenery_dicts := []
+	for s in scenery:
+		var p: Vector2 = s.pos
+		scenery_dicts.append({"id": int(s.id), "model_id": String(s.model_id),
+			"x": p.x, "y": p.y, "rot": float(s.rot)})
 	var consist_dicts := []
 	for c in consists:
 		var car_dicts := []
@@ -222,9 +252,10 @@ func to_dict() -> Dictionary:
 			"cars": car_dicts,
 		})
 	return {
-		"version": 2,
+		"version": 3,
 		"edges": edge_dicts,
 		"signals": sig_dicts,
 		"terrain": terrain_dict,
+		"scenery": scenery_dicts,
 		"consists": consist_dicts,
 	}

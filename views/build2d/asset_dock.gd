@@ -88,10 +88,16 @@ func _build_model_folder(root: TreeItem, category: String, label: String) -> voi
 		return
 	var folder := _make_folder(root, label)
 	folder.collapsed = category != "engine"
+	# Rolling stock is placed onto track; scenery and props are free-standing, so
+	# they get their own tool kind rather than being routed through TrainBuilder.
+	var rolling := category == "engine" or category == "car"
 	for def in defs:
 		var tip := "Click, then click on track to place it — drop it next to a\ntrain's end to couple. X removes the car under the cursor."
+		if not rolling:
+			tip = "Click, then click anywhere on the map to place it.\nQ/E rotate. X removes the model under the cursor."
+		var kind := "vehicle" if rolling else "scenery"
 		var item := _add_tool_item(folder, def.display_name, _box_icon(category),
-			{"kind": "vehicle", "id": String(def.id)}, tip)
+			{"kind": kind, "id": String(def.id)}, tip)
 		if def.mesh_path != "" and _thumbs != null:
 			_thumbs.request_icon(def, func(tex: Variant) -> void:
 				if tex is Texture2D and is_instance_valid(_tree):
