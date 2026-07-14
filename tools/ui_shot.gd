@@ -72,14 +72,18 @@ func _seed_world() -> void:
 	# RB_SCENERY places a scenery model beyond the loop, e.g.
 	# RB_SCENERY=mountainrange_snow. It goes on +y, which is the far side of the
 	# layout from the aerial camera, and is stood off by its own half-length so a
-	# big one frames the track instead of burying it.
+	# big one frames the track instead of burying it. RB_SCENERY_DIST overrides that
+	# stand-off in metres: a small model needs to sit nearer the loop to read at all.
 	var scenery_id := OS.get_environment("RB_SCENERY")
 	if scenery_id != "":
 		var sdef := lib.get_def(StringName(scenery_id))
 		if sdef == null:
 			push_warning("RB_SCENERY=%s not in the library" % scenery_id)
 		else:
-			w.place_scenery(sdef.id, Vector2(0.0, sdef.length_m * 0.5 + 40.0))
+			var dist := sdef.length_m * 0.5 + 40.0
+			if OS.get_environment("RB_SCENERY_DIST") != "":
+				dist = float(OS.get_environment("RB_SCENERY_DIST"))
+			w.place_scenery(sdef.id, Vector2(0.0, dist))
 
 	var placed := TrainBuilder.place_vehicle(w, eng, Vector2(0.0, -6.0))
 	if bool(placed.ok):
